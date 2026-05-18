@@ -55,10 +55,15 @@ class ManualDetector(Detector):
 
     System paths (e.g. /bin, /usr/bin) are excluded because they contain
     OS-provided tools, not user-installed software.
+
+    ``managed`` should be the dict of already-detected packages so that
+    known binaries are not duplicated as manual. Defaults to an empty dict
+    (all PATH binaries will be reported as manual) which satisfies the
+    no-argument construction implied by the Detector interface.
     """
 
-    def __init__(self, managed: Dict[str, Package]) -> None:
-        self._managed = managed
+    def __init__(self, managed: Dict[str, Package] | None = None) -> None:
+        self._managed: Dict[str, Package] = managed if managed is not None else {}
 
     @property
     def name(self) -> str:

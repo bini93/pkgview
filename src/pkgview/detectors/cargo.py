@@ -29,16 +29,23 @@ class CargoDetector(Detector):
             #       rg
             #   bat v0.24.0:
             #       bat
+            # The binary name (indented line) is what ends up in $PATH, not the
+            # crate name. We key by binary name so ManualDetector correctly
+            # identifies these as managed.
+            current_version: str | None = None
             for line in result.stdout.splitlines():
-                match = re.match(r"^(\S+)\s+v([\d.][^\s:]*):", line)
+                match = re.match(r"^(\S+)\s+v([\d.][^\s:]*):" , line)
                 if match:
-                    name, version = match.group(1), match.group(2)
-                    packages[name] = Package(
-                        name=name,
-                        manager="cargo",
-                        version=version,
-                        category="cli",
-                    )
+                    current_version = match.group(2)
+                elif current_version is not None and line.startswith("    "):
+                    binary = line.strip()
+                    if binary:
+                        packages[binary] = Package(
+                            name=binary,
+                            manager="cargo",
+                            version=current_version,
+                            category="cli",
+                        )
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
             pass
         return packages

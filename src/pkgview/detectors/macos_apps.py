@@ -25,7 +25,16 @@ def _brew_cask_names() -> Set[str]:
 
 
 class MacOsAppsDetector(Detector):
-    """Scans /Applications and ~/Applications for .app bundles on macOS."""
+    """Scans /Applications and ~/Applications for .app bundles on macOS.
+
+    Pass ``brew_casks`` (a set of already-detected cask names) to avoid a
+    redundant ``brew list --cask`` subprocess call. When omitted the detector
+    falls back to calling brew itself.
+    """
+
+    def __init__(self, brew_casks: frozenset[str] | None = None) -> None:
+        # None signals "auto-detect"; an empty frozenset means "no casks known".
+        self._brew_casks = brew_casks
 
     @property
     def name(self) -> str:
@@ -38,7 +47,7 @@ class MacOsAppsDetector(Detector):
         if not Path("/Applications").exists():
             return {}
 
-        brew_casks = _brew_cask_names()
+        brew_casks = self._brew_casks if self._brew_casks is not None else _brew_cask_names()
         scan_dirs = [Path("/Applications"), Path.home() / "Applications"]
 
         for scan_dir in scan_dirs:

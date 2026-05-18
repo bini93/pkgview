@@ -48,5 +48,9 @@ dmypy.json
 .AppleDouble
 .LSOverride
 
+# Local planning / notes (keep locally, not in repo)
+*.md
+!README.md
+
 # Logs
 *.log

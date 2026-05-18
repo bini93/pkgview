@@ -22,7 +22,10 @@ class NpmDetector(Detector):
                 text=True,
                 timeout=30,
             )
-            # npm exits non-zero when there are peer dep warnings; parse anyway
+            # npm exits non-zero when there are peer dep warnings; parse anyway.
+            # Guard against an empty body (e.g. no global packages installed).
+            if not result.stdout.strip():
+                return {}
             data = json.loads(result.stdout)
             for pkg_name, info in data.get("dependencies", {}).items():
                 version: str | None = info.get("version") if isinstance(info, dict) else None

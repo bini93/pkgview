@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from rich.console import Console
+from rich.console import Console, RenderableType
 from rich.table import Table
 from rich.text import Text
 
@@ -56,7 +56,7 @@ def render_table(packages: List[Package], console: Console, show_paths: bool = F
         icon = MANAGER_ICONS.get(pkg.manager, "  ")
         manager_text = Text(f"{icon} {pkg.manager}", style=style)
 
-        row = [
+        row: list[RenderableType] = [
             pkg.name,
             manager_text,
             pkg.version or "–",

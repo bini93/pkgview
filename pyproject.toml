@@ -15,5 +15,15 @@ dependencies = [
 [project.scripts]
 pkgview = "pkgview.cli:run"
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.14",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/pkgview"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"

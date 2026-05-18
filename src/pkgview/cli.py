@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional, Type
 
@@ -18,7 +17,7 @@ from pkgview.detectors.snap import SnapDetector
 from pkgview.detectors.flatpak import FlatpakDetector
 from pkgview.detectors.macos_apps import MacOsAppsDetector
 from pkgview.detectors.manual import ManualDetector
-from pkgview.models import Package
+from pkgview.models import Package, MANAGED_MANAGERS
 from pkgview.output.table import render_table
 from pkgview.output.json_out import render_json
 
@@ -41,7 +40,8 @@ INDEPENDENT_DETECTORS: List[Type[Detector]] = [
 ]
 
 VALID_SORT_KEYS = {"name", "manager", "version"}
-VALID_MANAGERS = {"brew", "brew-cask", "npm", "pip", "pipx", "cargo", "apt", "snap", "flatpak", "manual"}
+# Derived from MANAGED_MANAGERS (single source of truth in models.py) plus "manual".
+VALID_MANAGERS = MANAGED_MANAGERS | {"manual"}
 
 
 @app.command()
@@ -89,6 +89,7 @@ def main(
         raise typer.Exit(code=1)
 
     all_packages: dict[str, Package] = {}
+    _warnings: list[str] = []
 
     with Progress(
         SpinnerColumn(),
@@ -99,6 +100,9 @@ def main(
         task = progress.add_task("Scanning package managers …", total=None)
 
         # ── Phase 1: independent detectors in parallel ──────────────────────
+        # Note: INDEPENDENT_DETECTORS holds direct class references; patch the
+        # list itself (pkgview.cli.INDEPENDENT_DETECTORS) in tests, not the
+        # individual class names.
         with ThreadPoolExecutor(max_workers=len(INDEPENDENT_DETECTORS)) as executor:
             futures = {
                 executor.submit(cls().detect): cls.__name__
@@ -108,16 +112,22 @@ def main(
                 try:
                     result = future.result()
                     all_packages.update(result)
-                except Exception:
-                    pass  # individual detector failures are non-fatal
+                except Exception as exc:
+                    _warnings.append(f"[yellow]Warning: {futures[future]} failed: {exc}[/yellow]")
 
         # ── Phase 2: GUI apps (macOS only, sequential) ───────────────────────
         if not no_apps:
             progress.update(task, description="Scanning GUI apps …")
             try:
-                all_packages.update(MacOsAppsDetector().detect())
-            except Exception:
-                pass
+                # Reuse brew-cask names already detected in Phase 1 to avoid a
+                # second `brew list --cask` subprocess call.
+                brew_casks = frozenset(
+                    name for name, pkg in all_packages.items()
+                    if pkg.manager == "brew-cask"
+                )
+                all_packages.update(MacOsAppsDetector(brew_casks=brew_casks).detect())
+            except Exception as exc:
+                _warnings.append(f"[yellow]Warning: MacOsAppsDetector failed: {exc}[/yellow]")
 
         # ── Phase 3: manual (needs all managed packages as reference) ────────
         if not no_manual:
@@ -125,17 +135,17 @@ def main(
             try:
                 manual = ManualDetector(managed=all_packages).detect()
                 all_packages.update(manual)
-            except Exception:
-                pass
+            except Exception as exc:
+                _warnings.append(f"[yellow]Warning: ManualDetector failed: {exc}[/yellow]")
+
+    for w in _warnings:
+        console.print(w)
 
     packages = list(all_packages.values())
 
     # ── Filter ───────────────────────────────────────────────────────────────
     if filter_manager:
         packages = [p for p in packages if p.manager == filter_manager]
-
-    if no_manual:
-        packages = [p for p in packages if p.manager != "manual"]
 
     # ── Sort ─────────────────────────────────────────────────────────────────
     if sort_by == "name":

@@ -17,6 +17,7 @@ from pkgview.detectors.snap import SnapDetector
 from pkgview.detectors.flatpak import FlatpakDetector
 from pkgview.detectors.macos_apps import MacOsAppsDetector
 from pkgview.detectors.manual import ManualDetector
+from pkgview import __version__
 from pkgview.models import Package, MANAGED_MANAGERS
 from pkgview.output.table import render_table
 from pkgview.output.json_out import render_json
@@ -24,6 +25,7 @@ from pkgview.output.json_out import render_json
 app = typer.Typer(
     help="[bold]pkgview[/bold] – list all installed programs and who manages them.",
     rich_markup_mode="rich",
+    no_args_is_help=False,
 )
 
 console = Console()
@@ -40,7 +42,6 @@ INDEPENDENT_DETECTORS: List[Type[Detector]] = [
 ]
 
 VALID_SORT_KEYS = {"name", "manager", "version"}
-# Derived from MANAGED_MANAGERS (single source of truth in models.py) plus "manual".
 VALID_MANAGERS = MANAGED_MANAGERS | {"manual"}
 
 
@@ -72,8 +73,17 @@ def main(
         "-p",
         help="Add a Path column to the table.",
     ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version and exit.",
+        is_eager=True,
+    ),
 ) -> None:
-    # Input validation
+    if version:
+        console.print(f"pkgview {__version__}")
+        raise typer.Exit()
     if filter_manager and filter_manager not in VALID_MANAGERS:
         console.print(
             f"[red]Unknown manager '[bold]{filter_manager}[/bold]'. "

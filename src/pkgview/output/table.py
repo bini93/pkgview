@@ -9,7 +9,6 @@ from rich.text import Text
 from pkgview.models import Package
 
 
-# Color per manager – managed = vivid, manual = yellow warning
 MANAGER_STYLES: dict[str, str] = {
     "brew": "bold green",
     "brew-cask": "bold cyan",
@@ -42,7 +41,7 @@ def render_table(packages: List[Package], console: Console, show_paths: bool = F
         show_header=True,
         header_style="bold white",
         border_style="bright_black",
-        row_styles=["", "dim"],  # alternating rows
+        row_styles=["", "dim"],
     )
     table.add_column("Name", style="white bold", no_wrap=True, min_width=18)
     table.add_column("Manager", no_wrap=True, min_width=14)

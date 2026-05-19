@@ -52,6 +52,7 @@ dmypy.json
 *.md
 !README.md
 !DEVELOPMENT.md
+!CHANGELOG.md
 
 # Logs
 *.log

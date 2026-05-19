@@ -6,6 +6,8 @@ build-backend = "hatchling.build"
 name = "pkgview"
 version = "0.1.0"
 description = "CLI tool to list all installed programs and their package manager"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Biniam Tessema" }]
 requires-python = ">=3.9"
 dependencies = [
     "typer>=0.12.0",

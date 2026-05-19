@@ -1,0 +1,44 @@
+pkgview - CLI tool to list all installed programs and their package manager
+Copyright (C) 2026  Biniam Tessema
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+-------------------------------------------------------------------------------
+ADDITIONAL TERMS under GNU GPL version 3 section 7
+-------------------------------------------------------------------------------
+
+As permitted by section 7 of the GNU General Public License, the following
+additional terms apply to this program:
+
+1. Attribution of Original Author
+   Any distribution of this program, or any derivative work based on it,
+   must prominently display the following notice in the documentation,
+   README, user interface, or any other place where authorship is credited:
+
+       "pkgview was originally created by Biniam Tessema
+        (https://github.com/biniamtessema)."
+
+   This notice must not be removed or obscured.
+
+2. Preservation of Copyright Notices
+   You may not remove or alter any copyright notices contained within the
+   source code or accompanying documentation of this program or any
+   derivative work.
+
+-------------------------------------------------------------------------------
+FULL LICENSE TEXT
+-------------------------------------------------------------------------------
+
+The full text of the GNU General Public License version 3 is available at:
+https://www.gnu.org/licenses/gpl-3.0.txt

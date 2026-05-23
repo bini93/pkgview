@@ -1,0 +1,42 @@
+# CODEOWNERS
+#
+# Each line maps a file pattern to one or more owners.
+# Owners are automatically requested as reviewers for PRs
+# that touch the matching files.
+#
+# Syntax: <pattern>  @<user-or-team>  [@<additional-owner> ...]
+#
+# ---------------------------------------------------------------------------
+# MAINTAINERS
+#
+# Option A – Individual users (no GitHub Org required):
+#   List trusted contributors directly, e.g.:
+#   *  @bini93  @trusted-contributor
+#
+# Option B – GitHub Team (requires a GitHub Organization):
+#   Create a team "maintainers" in your org, then use:
+#   *  @bini93/maintainers
+#
+# To allow someone to merge PRs they must also have at minimum the
+# "Write" (Collaborator) role in Settings → Collaborators & teams.
+# Use "Maintain" if they should manage issues/PRs but not change settings.
+# ---------------------------------------------------------------------------
+
+# Default owner – catches everything not matched below
+# Add co-maintainers here: @bini93  @other-maintainer
+*                          @bini93
+
+# Core logic & models – reviewed by lead maintainer only
+src/pkgview/cli.py         @bini93
+src/pkgview/models.py      @bini93
+
+# Detectors (security-sensitive – shell command execution)
+src/pkgview/detectors/     @bini93
+
+# Tests
+tests/                     @bini93
+
+# CI / release pipeline – only lead maintainer
+.github/                   @bini93
+release-please-config.json @bini93
+pyproject.toml             @bini93

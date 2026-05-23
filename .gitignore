@@ -53,6 +53,9 @@ dmypy.json
 !README.md
 !DEVELOPMENT.md
 !CHANGELOG.md
+!CONTRIBUTING.md
+!SECURITY.md
+!.github/pull_request_template.md
 
 # Logs
 *.log

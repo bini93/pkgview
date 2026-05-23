@@ -1,0 +1,43 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have an idea? Great! Please describe it clearly.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Use Case
+      description: What problem does this solve? Who benefits?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like it to work?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other ways you thought about solving this
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - New package manager detector
+        - Output format / filtering
+        - Performance
+        - CLI / UX improvement
+        - Other
+    validations:
+      required: true

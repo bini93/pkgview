@@ -148,8 +148,8 @@ Missing package managers are silently skipped — no errors.
 - [x] pacman / dnf / apk / nix / gem / composer detectors
 - [ ] TUI mode with [Textual](https://textual.textualize.io/) (`pkgview --tui`)
 - [ ] Docker Desktop, VS Code extension detection
-- [ ] Publish to [PyPI](https://pypi.org) — `pipx install pkgview` without GitHub URL
-- [ ] [Homebrew Tap](https://docs.brew.sh/Tap-Migrating-to-a-New-Package) — `brew install yourname/tap/pkgview`
+- [ ] Publish to [PyPI](https://pypi.org) — `pipx install pkgview` without GitHub URL *(workflow ready, pending first release)*
+- [ ] [Homebrew Tap](https://docs.brew.sh/Tap-Migrating-to-a-New-Package) — `brew install yourname/tap/pkgview` *(formula template in `packaging/homebrew/`)*
 
 ## License
 

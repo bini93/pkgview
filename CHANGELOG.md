@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.3.0](https://github.com/bini93/pkgview/compare/pkgview-v0.2.0...pkgview-v0.3.0) (2026-05-23)
+
+
+### ### Added
+
+* add CI workflow, changelog, and update project metadata ([91ad5d0](https://github.com/bini93/pkgview/commit/91ad5d01427cbeeb0f1f0c329d8ff7506b1bbd62))
+* add DEVELOPMENT.md and Makefile for development setup and instructions ([84ae1cd](https://github.com/bini93/pkgview/commit/84ae1cdbfd45747e50ee536547d2636c2eb1cd85))
+* add GitHub Actions workflow for publishing to PyPI and update README ([f1ad8ca](https://github.com/bini93/pkgview/commit/f1ad8caffdc67f369281e77d0b58cb40b3fabc59))
+* add LICENSE file and update license information in pyproject.toml ([9ae928d](https://github.com/bini93/pkgview/commit/9ae928d31ab8da65e226b09817e2d4e8f4cd19d5))
+* add Mamba and Micromamba support, enhance package detection and update README ([5e0d639](https://github.com/bini93/pkgview/commit/5e0d6393de9d7ce2b4f8397c3ea338d25b53b738))
+* add release-please configuration and manifest files for automated releases ([e832f03](https://github.com/bini93/pkgview/commit/e832f03a9a9f2ca19bc9387cb7d3d1115580acb4))
+* add support for various package managers and enhance detection capabilities ([584a7ba](https://github.com/bini93/pkgview/commit/584a7ba225c6f748e3e2f23051cb71c9ac12207c))
+* enhance GitHub Actions workflow with testing steps and update project metadata ([404bdec](https://github.com/bini93/pkgview/commit/404bdec915dadd280c102907d1961d7aac07d5e4))
+* initial implementation of pkgview ([bbabe0b](https://github.com/bini93/pkgview/commit/bbabe0b01924efa9a45156d58439a49cc15a4565))
+* update release-please workflow to use RELEASE_PLEASE_TOKEN for authentication ([dba1376](https://github.com/bini93/pkgview/commit/dba13764f7322528cca8a6c6f27c1c2f0d4632e4))
+* update version to 0.2.0, add new detectors and flags, enhance output formats ([2e202aa](https://github.com/bini93/pkgview/commit/2e202aafa8b5f6813e61e733d7f84eafb075af44))
+
+
+### ### Changed
+
+* update type hints and improve error handling in macOS apps detector ([a66cb22](https://github.com/bini93/pkgview/commit/a66cb22e07569257a4f028acff99d57a036598f2))
+
+
+### ### Maintenance
+
+* setup release-please and PyPI publishing ([86c45b5](https://github.com/bini93/pkgview/commit/86c45b578b7aea7af007edf3522066822e36e604))
+
 ## [0.2.0] – 2026-05-22
 
 ### Added

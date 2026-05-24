@@ -3,6 +3,7 @@ name: Release Please
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -22,6 +23,15 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Debug release-please outputs
+        run: |
+          echo "release_created : ${{ steps.release.outputs.release_created }}"
+          echo "prs_created     : ${{ steps.release.outputs.prs_created }}"
+          echo "pr              : ${{ steps.release.outputs.pr }}"
+          echo "tag_name        : ${{ steps.release.outputs.tag_name }}"
+          echo "upload_url      : ${{ steps.release.outputs.upload_url }}"
+          echo "token_source    : ${{ secrets.RELEASE_PLEASE_TOKEN != '' && 'RELEASE_PLEASE_TOKEN' || 'github.token (fallback)' }}"
 
   publish:
     needs: release-please

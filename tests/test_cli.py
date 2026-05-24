@@ -15,6 +15,8 @@ runner = CliRunner()
 def _make_detector_cls(packages: dict) -> type:
     """Return a fresh fake Detector class whose detect() returns ``packages``."""
     class _FakeDetector:
+        name = "fake"
+
         def detect(self):
             return packages
     return _FakeDetector
@@ -167,3 +169,85 @@ class TestCliSorting:
         data = self._run_sorted("version", packages)
         versions = [p["version"] for p in data]
         assert versions == sorted(versions, key=str.lower)
+
+
+class TestCliVerboseMode:
+    def test_verbose_exits_with_code_0(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["--verbose"])
+        assert result.exit_code == 0
+
+    def test_verbose_short_flag_exits_with_code_0(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["-v"])
+        assert result.exit_code == 0
+
+    def test_verbose_shows_scan_header(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["--verbose"])
+        assert "Scanning package managers" in result.output
+
+    def test_verbose_shows_detector_name(self):
+        packages = {"git": Package(name="git", manager="fake")}
+        with _mock_detectors(independent_packages=packages):
+            result = runner.invoke(app, ["--verbose"])
+        assert "fake" in result.output
+
+    def test_verbose_shows_singular_package_count(self):
+        packages = {"git": Package(name="git", manager="fake")}
+        with _mock_detectors(independent_packages=packages):
+            result = runner.invoke(app, ["--verbose"])
+        assert "1 package" in result.output
+        assert "1 packages" not in result.output
+
+    def test_verbose_shows_plural_package_count(self):
+        packages = {
+            "git": Package(name="git", manager="fake"),
+            "curl": Package(name="curl", manager="fake"),
+        }
+        with _mock_detectors(independent_packages=packages):
+            result = runner.invoke(app, ["--verbose"])
+        assert "2 packages" in result.output
+
+    def test_verbose_shows_total_elapsed_time(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["--verbose"])
+        assert "Scan completed in" in result.output
+
+    def test_verbose_with_no_apps(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["--verbose", "--no-apps"])
+        assert result.exit_code == 0
+
+    def test_verbose_with_no_manual(self):
+        with _mock_detectors():
+            result = runner.invoke(app, ["--verbose", "--no-manual"])
+        assert result.exit_code == 0
+
+    def test_verbose_combined_with_json(self):
+        packages = {"git": Package(name="git", manager="fake")}
+        with _mock_detectors(independent_packages=packages):
+            result = runner.invoke(app, ["--verbose", "--json"])
+        assert result.exit_code == 0
+        # verbose header and JSON data must both be present in the combined output
+        assert "Scanning package managers" in result.output
+        assert '"name": "git"' in result.output
+
+    def test_verbose_detector_failure_shows_inline(self):
+        """A detector exception must appear inline in verbose mode."""
+        class _FailingDetector:
+            name = "exploding"
+
+            def detect(self):
+                raise RuntimeError("boom")
+
+        with patch("pkgview.cli.INDEPENDENT_DETECTORS", [_FailingDetector]), \
+             patch("pkgview.cli.MacOsAppsDetector") as mock_macos, \
+             patch("pkgview.cli.ManualDetector") as mock_manual:
+            mock_macos.return_value.detect.return_value = {}
+            mock_manual.return_value.detect.return_value = {}
+            result = runner.invoke(app, ["--verbose"])
+
+        assert result.exit_code == 0
+        assert "exploding" in result.output
+        assert "boom" in result.output

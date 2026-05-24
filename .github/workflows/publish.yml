@@ -1,8 +1,11 @@
-name: Publish to PyPI
+name: Publish to PyPI (manual)
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to publish (e.g. pkgview-v0.4.0)"
+        required: true
 
 jobs:
   test:

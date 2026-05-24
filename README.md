@@ -83,6 +83,7 @@ pkgview [OPTIONS]
 | `--export PATH` | `-e` | – | Save snapshot to file (`.csv` → CSV, everything else → JSON) |
 | `--no-apps` | – | off | Exclude GUI apps (`/Applications`) |
 | `--no-manual` | – | off | Hide manually installed programs |
+| `--verbose` | `-v` | off | Show each detector's name, package count, and elapsed time |
 | `--version` | `-V` | – | Show version and exit |
 | `--help` | – | – | Show help and exit |
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.4.0](https://github.com/bini93/pkgview/compare/pkgview-v0.3.1...pkgview-v0.4.0) (2026-05-24)
+
+
+### Added
+
+* spotlight search ([#3](https://github.com/bini93/pkgview/issues/3)) ([9ebf3cf](https://github.com/bini93/pkgview/commit/9ebf3cfe5e680e24199d5e30f85c9272d9d4d2de))
+
 ## [0.3.1](https://github.com/bini93/pkgview/compare/pkgview-v0.3.0...pkgview-v0.3.1) (2026-05-23)
 
 

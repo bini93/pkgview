@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [0.3.0](https://github.com/bini93/pkgview/compare/pkgview-v0.2.0...pkgview-v0.3.0) (2026-05-23)
 
 
-### ### Added
+### Added
 
 * add CI workflow, changelog, and update project metadata ([91ad5d0](https://github.com/bini93/pkgview/commit/91ad5d01427cbeeb0f1f0c329d8ff7506b1bbd62))
 * add DEVELOPMENT.md and Makefile for development setup and instructions ([84ae1cd](https://github.com/bini93/pkgview/commit/84ae1cdbfd45747e50ee536547d2636c2eb1cd85))
@@ -24,12 +24,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 * update version to 0.2.0, add new detectors and flags, enhance output formats ([2e202aa](https://github.com/bini93/pkgview/commit/2e202aafa8b5f6813e61e733d7f84eafb075af44))
 
 
-### ### Changed
+### Changed
 
 * update type hints and improve error handling in macOS apps detector ([a66cb22](https://github.com/bini93/pkgview/commit/a66cb22e07569257a4f028acff99d57a036598f2))
 
 
-### ### Maintenance
+### Maintenance
 
 * setup release-please and PyPI publishing ([86c45b5](https://github.com/bini93/pkgview/commit/86c45b578b7aea7af007edf3522066822e36e604))
 

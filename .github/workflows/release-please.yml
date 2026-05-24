@@ -30,8 +30,17 @@ jobs:
           echo "prs_created     : ${{ steps.release.outputs.prs_created }}"
           echo "pr              : ${{ steps.release.outputs.pr }}"
           echo "tag_name        : ${{ steps.release.outputs.tag_name }}"
-          echo "upload_url      : ${{ steps.release.outputs.upload_url }}"
           echo "token_source    : ${{ secrets.RELEASE_PLEASE_TOKEN != '' && 'RELEASE_PLEASE_TOKEN' || 'github.token (fallback)' }}"
+          {
+            echo "## Release Please Diagnostics"
+            echo "| Output | Value |"
+            echo "|--------|-------|"
+            echo "| \`release_created\` | \`${{ steps.release.outputs.release_created }}\` |"
+            echo "| \`prs_created\` | \`${{ steps.release.outputs.prs_created }}\` |"
+            echo "| \`pr\` | \`${{ steps.release.outputs.pr }}\` |"
+            echo "| \`tag_name\` | \`${{ steps.release.outputs.tag_name }}\` |"
+            echo "| \`token_source\` | \`${{ secrets.RELEASE_PLEASE_TOKEN != '' && 'RELEASE_PLEASE_TOKEN secret' || 'github.token (fallback – RELEASE_PLEASE_TOKEN not set!)' }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   publish:
     needs: release-please

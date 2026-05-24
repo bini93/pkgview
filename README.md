@@ -19,7 +19,7 @@ Total: 75 programs  │  57 managed  │  18 manual
 
 ## Features
 
-- Detects programs from: **brew**, **brew-cask**, **npm** (global), **pip**, **pipx**, **cargo**, **apt**, **snap**, **flatpak**, **conda** / **mamba**, **pacman**, **dnf** / **yum**, **apk**, **nix**, **gem**, **composer**, **winget**, **scoop**, **chocolatey**, **nvm**, **asdf**, **pyenv**
+- Detects programs from: **brew**, **brew-cask**, **npm** (global), **pip**, **pipx**, **cargo**, **apt**, **snap**, **flatpak**, **conda** / **mamba** / **micromamba**, **pacman**, **dnf** / **yum**, **apk**, **nix**, **gem**, **composer**, **winget**, **scoop**, **chocolatey**, **nvm**, **asdf**, **pyenv**
 - Scans `/Applications` and `~/Applications` on macOS for GUI apps
 - Marks everything not tracked by a package manager as `manual`
 - Correctly ignores macOS/Linux system binaries (`/bin`, `/usr/bin`, etc.)
@@ -46,7 +46,7 @@ brew install pipx
 pipx ensurepath
 
 # Install pkgview directly from GitHub
-pipx install git+https://github.com/yourname/pkgview.git
+pipx install git+https://github.com/bini93/pkgview.git
 ```
 
 The `pkgview` command is immediately available system-wide.
@@ -75,7 +75,7 @@ pkgview [OPTIONS]
 
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
-| `--filter TEXT` | `-f` | – | Show only programs from one manager.<br>Values: `brew`, `brew-cask`, `npm`, `pip`, `pipx`, `cargo`, `apt`, `snap`, `flatpak`, `conda`, `mamba`, `pacman`, `yay`, `dnf`, `yum`, `zypper`, `apk`, `nix`, `gem`, `composer`, `winget`, `scoop`, `chocolatey`, `nvm`, `asdf`, `pyenv`, `manual` |
+| `--filter TEXT` | `-f` | – | Show only programs from one manager.<br>Values: `brew`, `brew-cask`, `npm`, `pip`, `pipx`, `cargo`, `apt`, `snap`, `flatpak`, `conda`, `mamba`, `micromamba`, `pacman`, `yay`, `dnf`, `yum`, `zypper`, `apk`, `nix`, `gem`, `composer`, `winget`, `scoop`, `chocolatey`, `nvm`, `asdf`, `pyenv`, `manual` |
 | `--sort TEXT` | `-s` | `manager` | Sort column: `name`, `manager`, `version` |
 | `--json` | `-j` | off | Output raw JSON instead of a table |
 | `--paths` | `-p` | off | Add a Path column to the table |
@@ -121,9 +121,12 @@ pkgview --no-apps --no-manual
 | 🐧 | `apt` | Linux (Debian/Ubuntu) | `apt-mark showmanual` |
 | 🐧 | `snap` | Linux | `snap list` |
 | 🐧 | `flatpak` | Linux | `flatpak list --app` |
-| 🐍 | `conda` / `mamba` | macOS, Linux | `conda list --json` / `mamba list --json` |
+| 🐍 | `conda` | macOS, Linux | `conda list --json` |
+| 🐍 | `mamba` / `micromamba` | macOS, Linux | `mamba list --json` / `micromamba list --json` |
 | 🐧 | `pacman` | Linux (Arch) | `pacman -Qe` |
+| 🐧 | `yay` | Linux (Arch AUR) | recognized; no active detector |
 | 🐧 | `dnf` / `yum` | Linux (Fedora/RHEL) | `dnf repoquery --userinstalled` |
+| 🐧 | `zypper` | Linux (openSUSE) | recognized; no active detector |
 | 🐧 | `apk` | Linux (Alpine) | `apk list --installed` |
 | ❄  | `nix` | macOS, Linux | `nix-env -q` |
 | 💎 | `gem` | macOS, Linux | `gem list --no-verbose` |
@@ -148,8 +151,8 @@ Missing package managers are silently skipped — no errors.
 - [x] pacman / dnf / apk / nix / gem / composer detectors
 - [ ] TUI mode with [Textual](https://textual.textualize.io/) (`pkgview --tui`)
 - [ ] Docker Desktop, VS Code extension detection
-- [ ] Publish to [PyPI](https://pypi.org) — `pipx install pkgview` without GitHub URL *(workflow ready, pending first release)*
-- [ ] [Homebrew Tap](https://docs.brew.sh/Tap-Migrating-to-a-New-Package) — `brew install yourname/tap/pkgview` *(formula template in `packaging/homebrew/`)*
+- [x] Publish to [PyPI](https://pypi.org) — `pipx install pkgview` without GitHub URL
+- [ ] [Homebrew Tap](https://docs.brew.sh/Tap-Migrating-to-a-New-Package) — `brew install yourname/tap/pkgview`
 
 ## License
 

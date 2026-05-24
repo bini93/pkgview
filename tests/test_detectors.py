@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
-from unittest.mock import patch, MagicMock
+import plistlib
+from unittest.mock import patch, MagicMock, mock_open
 import subprocess
 
 import pytest
@@ -12,6 +14,13 @@ from pkgview.detectors.pip import PipDetector, _pip_packages, _pipx_packages
 from pkgview.detectors.cargo import CargoDetector
 from pkgview.detectors.mamba import MambaDetector, _mamba_list
 from pkgview.detectors.manual import ManualDetector, SYSTEM_PATHS
+from pkgview.detectors.macos_apps import (
+    MacOsAppsDetector,
+    _brew_cask_names,
+    _read_app_plist,
+    _spotlight_find_app_paths,
+    _filesystem_find_app_paths,
+)
 from pkgview.models import Package
 
 
@@ -458,6 +467,358 @@ class TestMambaDetectorDetect:
         pkg = result["pandas"]
         assert pkg.version == "2.2.1"
         assert pkg.category == "cli"
+
+
+# ── MacOsAppsDetector ────────────────────────────────────────────────────────
+
+def _make_plist_bytes(bundle_id: str = "com.example.App", version: str = "1.2.3") -> bytes:
+    info = {
+        "CFBundleIdentifier": bundle_id,
+        "CFBundleShortVersionString": version,
+    }
+    return plistlib.dumps(info)
+
+
+class TestBrewCaskNames:
+    def test_returns_frozenset_of_lowercase_cask_names(self):
+        with patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="Firefox\nGoogle-Chrome\n", returncode=0)
+            result = _brew_cask_names()
+        assert isinstance(result, frozenset)
+        assert result == frozenset({"firefox", "google-chrome"})
+
+    def test_returns_empty_frozenset_on_timeout(self):
+        with patch(
+            "pkgview.detectors.macos_apps.subprocess.run",
+            side_effect=subprocess.TimeoutExpired("brew", 30),
+        ):
+            result = _brew_cask_names()
+        assert isinstance(result, frozenset)
+        assert result == frozenset()
+
+    def test_returns_empty_frozenset_when_brew_not_found(self):
+        with patch("pkgview.detectors.macos_apps.subprocess.run", side_effect=OSError):
+            result = _brew_cask_names()
+        assert isinstance(result, frozenset)
+        assert result == frozenset()
+
+    def test_returns_empty_frozenset_on_nonzero_returncode(self):
+        with patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="", returncode=1)
+            result = _brew_cask_names()
+        assert isinstance(result, frozenset)
+        assert result == frozenset()
+
+
+class TestSlowWarnings:
+    """Verify that _run_with_slow_warning emits a message to stderr when the
+    timer fires before the subprocess finishes, and stays silent otherwise."""
+
+    class _ImmediateTimer:
+        """Replacement for threading.Timer that fires the callback synchronously
+        on start() so tests are deterministic without actual sleep."""
+        daemon = False
+
+        def __init__(self, delay: float, fn):  # noqa: ANN001
+            self._fn = fn
+
+        def start(self) -> None:
+            self._fn()
+
+        def cancel(self) -> None:
+            pass
+
+    class _NeverTimer:
+        """Replacement for threading.Timer that never fires (cancel always wins)."""
+        daemon = False
+
+        def __init__(self, delay: float, fn):  # noqa: ANN001
+            pass
+
+        def start(self) -> None:
+            pass
+
+        def cancel(self) -> None:
+            pass
+
+    def test_brew_emits_warning_when_slow(self, capsys):
+        with patch("pkgview.detectors.macos_apps.threading.Timer", self._ImmediateTimer), \
+             patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="firefox\n", returncode=0)
+            _brew_cask_names()
+        err = capsys.readouterr().err
+        assert "brew list --cask" in err
+        assert "taking longer than expected" in err
+
+    def test_brew_no_warning_when_fast(self, capsys):
+        with patch("pkgview.detectors.macos_apps.threading.Timer", self._NeverTimer), \
+             patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="firefox\n", returncode=0)
+            _brew_cask_names()
+        assert capsys.readouterr().err == ""
+
+    def test_spotlight_emits_warning_when_slow(self, capsys):
+        with patch("pkgview.detectors.macos_apps.threading.Timer", self._ImmediateTimer), \
+             patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="/Applications/Safari.app\n", returncode=0)
+            _spotlight_find_app_paths()
+        err = capsys.readouterr().err
+        assert "mdfind" in err or "Spotlight" in err
+        assert "taking longer than expected" in err
+
+    def test_spotlight_no_warning_when_fast(self, capsys):
+        with patch("pkgview.detectors.macos_apps.threading.Timer", self._NeverTimer), \
+             patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="/Applications/Safari.app\n", returncode=0)
+            _spotlight_find_app_paths()
+        assert capsys.readouterr().err == ""
+
+
+class TestReadAppPlist:
+    def test_returns_version_and_bundle_id(self, tmp_path):
+        app = tmp_path / "MyApp.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(
+            _make_plist_bytes("com.example.myapp", "3.0.1")
+        )
+        version, bundle_id = _read_app_plist(app)
+        assert version == "3.0.1"
+        assert bundle_id == "com.example.myapp"
+
+    def test_falls_back_to_bundle_version_when_short_version_absent(self, tmp_path):
+        app = tmp_path / "Legacy.app"
+        (app / "Contents").mkdir(parents=True)
+        info = {"CFBundleVersion": "42", "CFBundleIdentifier": "com.legacy"}
+        (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
+        version, bundle_id = _read_app_plist(app)
+        assert version == "42"
+        assert bundle_id == "com.legacy"
+
+    def test_returns_empty_strings_when_plist_missing(self, tmp_path):
+        app = tmp_path / "NoPlist.app"
+        (app / "Contents").mkdir(parents=True)
+        version, bundle_id = _read_app_plist(app)
+        assert version == ""
+        assert bundle_id == ""
+
+    def test_returns_empty_strings_on_invalid_plist(self, tmp_path):
+        app = tmp_path / "Bad.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(b"not a plist at all")
+        version, bundle_id = _read_app_plist(app)
+        assert version == ""
+        assert bundle_id == ""
+
+    def test_returns_empty_strings_when_plist_root_is_not_dict(self, tmp_path):
+        # plistlib.load() can legitimately return a list or other type when the
+        # root element is not a dict.  Calling .get() on a list raises
+        # AttributeError, which must be handled gracefully.
+        app = tmp_path / "ListPlist.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(["item1", "item2"]))
+        version, bundle_id = _read_app_plist(app)
+        assert version == ""
+        assert bundle_id == ""
+
+
+class TestSpotlightFindAppPaths:
+    def test_returns_paths_ending_in_dot_app(self):
+        stdout = "/Applications/Safari.app\n/Applications/Xcode.app\n/not-an-app/foo\n"
+        with patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout=stdout, returncode=0)
+            paths = _spotlight_find_app_paths()
+        names = [p.name for p in paths]
+        assert "Safari.app" in names
+        assert "Xcode.app" in names
+        assert "foo" not in names
+
+    def test_returns_empty_on_nonzero_returncode(self):
+        with patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout="", returncode=1)
+            paths = _spotlight_find_app_paths()
+        assert paths == []
+
+    def test_returns_empty_on_timeout(self):
+        with patch(
+            "pkgview.detectors.macos_apps.subprocess.run",
+            side_effect=subprocess.TimeoutExpired("mdfind", 30),
+        ):
+            paths = _spotlight_find_app_paths()
+        assert paths == []
+
+    def test_returns_empty_when_mdfind_not_found(self):
+        with patch("pkgview.detectors.macos_apps.subprocess.run", side_effect=OSError):
+            paths = _spotlight_find_app_paths()
+        assert paths == []
+
+    def test_excludes_volumes_trash_and_derived_data_paths(self):
+        stdout = (
+            "/Applications/Safari.app\n"
+            "/Volumes/Backup/Applications/Safari.app\n"
+            "/Users/user/.Trash/Firefox.app\n"
+            "/Library/Developer/Xcode/DerivedData/MyApp/Build/Products/Debug/MyApp.app\n"
+        )
+        with patch("pkgview.detectors.macos_apps.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(stdout=stdout, returncode=0)
+            paths = _spotlight_find_app_paths()
+        assert len(paths) == 1
+        assert paths[0].name == "Safari.app"
+
+
+class TestMacOsAppsDetectorDetect:
+    def test_returns_empty_on_non_macos(self):
+        with patch("pkgview.detectors.macos_apps.sys.platform", "linux"):
+            result = MacOsAppsDetector().detect()
+        assert result == {}
+
+    def test_spotlight_populates_version_from_plist(self, tmp_path):
+        app = tmp_path / "MyApp.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(
+            _make_plist_bytes("com.example.myapp", "5.0")
+        )
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(), use_spotlight=True
+            ).detect()
+
+        assert "MyApp" in result
+        assert result["MyApp"].version == "5.0"
+        assert result["MyApp"].category == "app"
+
+    def test_marks_brew_cask_when_name_matches(self, tmp_path):
+        app = tmp_path / "Firefox.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(["firefox"]), use_spotlight=True
+            ).detect()
+
+        assert result["Firefox"].manager == "brew-cask"
+
+    def test_marks_manual_when_name_not_in_casks(self, tmp_path):
+        app = tmp_path / "UnknownApp.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(["firefox"]), use_spotlight=True
+            ).detect()
+
+        assert result["UnknownApp"].manager == "manual"
+
+    def test_falls_back_to_filesystem_when_spotlight_empty(self, tmp_path):
+        app = tmp_path / "Fallback.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[]), \
+             patch("pkgview.detectors.macos_apps._filesystem_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(), use_spotlight=True
+            ).detect()
+
+        assert "Fallback" in result
+
+    def test_use_spotlight_false_skips_mdfind(self, tmp_path):
+        app = tmp_path / "FSApp.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        spotlight_called = []
+
+        def fake_spotlight():
+            spotlight_called.append(True)
+            return []
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", side_effect=fake_spotlight), \
+             patch("pkgview.detectors.macos_apps._filesystem_find_app_paths", return_value=[app]):
+            MacOsAppsDetector(brew_casks=frozenset(), use_spotlight=False).detect()
+
+        assert not spotlight_called
+
+    def test_deduplicates_same_app_name(self, tmp_path):
+        dir1 = tmp_path / "d1"
+        dir2 = tmp_path / "d2"
+        for d in (dir1, dir2):
+            app = d / "DupApp.app"
+            (app / "Contents").mkdir(parents=True)
+            (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        paths = [dir1 / "DupApp.app", dir2 / "DupApp.app"]
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=paths):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(), use_spotlight=True
+            ).detect()
+
+        assert list(result.keys()).count("DupApp") == 1
+
+    def test_skips_non_directory_paths(self, tmp_path):
+        not_a_dir = tmp_path / "Ghost.app"
+        # deliberately do NOT create it on disk
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[not_a_dir]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(), use_spotlight=True
+            ).detect()
+
+        assert "Ghost" not in result
+
+    def test_version_none_when_plist_has_no_version(self, tmp_path):
+        app = tmp_path / "NoVersion.app"
+        (app / "Contents").mkdir(parents=True)
+        info = {"CFBundleIdentifier": "com.noversion"}
+        (app / "Contents" / "Info.plist").write_bytes(plistlib.dumps(info))
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(), use_spotlight=True
+            ).detect()
+
+        assert result["NoVersion"].version is None
+
+    def test_auto_detects_casks_when_brew_casks_is_none(self, tmp_path):
+        app = tmp_path / "Firefox.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]), \
+             patch("pkgview.detectors.macos_apps._brew_cask_names", return_value=frozenset(["firefox"])):
+            result = MacOsAppsDetector(brew_casks=None, use_spotlight=True).detect()
+
+        assert result["Firefox"].manager == "brew-cask"
+
+    def test_cask_normalization_fails_for_versioned_app_names(self, tmp_path):
+        # Known limitation: "1Password 8" normalises to "1password-8", which
+        # does not match the Homebrew cask token "1password".
+        # This test documents current behaviour so regressions are detected
+        # if the matching logic is improved in the future.
+        app = tmp_path / "1Password 8.app"
+        (app / "Contents").mkdir(parents=True)
+        (app / "Contents" / "Info.plist").write_bytes(_make_plist_bytes())
+
+        with patch("pkgview.detectors.macos_apps.sys.platform", "darwin"), \
+             patch("pkgview.detectors.macos_apps._spotlight_find_app_paths", return_value=[app]):
+            result = MacOsAppsDetector(
+                brew_casks=frozenset(["1password"]), use_spotlight=True
+            ).detect()
+
+        # "1password-8" != "1password" – naive normalisation misses this case.
+        assert result["1Password 8"].manager == "manual"
 
     def test_name_property(self):
         assert MambaDetector().name == "mamba"

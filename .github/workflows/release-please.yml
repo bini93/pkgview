@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag manuell publishen (z.B. pkgview-v0.5.0). Leer lassen für normalen release-please Lauf."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -30,7 +35,7 @@ jobs:
 
   publish:
     needs: release-please
-    if: ${{ needs.release-please.outputs.release_created == 'true' }}
+    if: ${{ needs.release-please.outputs.release_created == 'true' || inputs.tag != '' }}
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -39,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ needs.release-please.outputs.tag_name }}
+          ref: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
 
       - uses: actions/setup-python@v6
         with:

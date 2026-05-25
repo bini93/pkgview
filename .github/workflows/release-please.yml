@@ -24,70 +24,9 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          token: ${{ github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-
-      - name: Diagnose release-please
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
-        run: |
-          {
-            echo "## Release-please Outputs"
-            echo "| Key | Value |"
-            echo "|-----|-------|"
-            echo "| \`release_created\` | \`${{ steps.release.outputs.release_created }}\` |"
-            echo "| \`prs_created\` | \`${{ steps.release.outputs.prs_created }}\` |"
-            echo "| \`pr\` | \`${{ steps.release.outputs.pr }}\` |"
-            echo "| \`tag_name\` | \`${{ steps.release.outputs.tag_name }}\` |"
-            echo "| Token | \`${{ secrets.RELEASE_PLEASE_TOKEN != '' && 'RELEASE_PLEASE_TOKEN' || 'github.token (fallback)' }}\` |"
-            echo ""
-            echo "## Commits since pkgview-v0.4.0"
-            echo "\`\`\`"
-            git log pkgview-v0.4.0..HEAD --oneline 2>&1 || echo "Tag not found!"
-            echo "\`\`\`"
-            echo ""
-            echo "## Token permissions on repo"
-            echo "\`\`\`json"
-            gh api repos/bini93/pkgview --jq '.permissions' 2>&1
-            echo "\`\`\`"
-            echo ""
-            echo "## Branch-creation write test"
-            TEST_SHA=$(git rev-parse HEAD)
-            TEST_BRANCH="diag-write-test-$$"
-            BRANCH_OK=false
-            if gh api --method POST repos/bini93/pkgview/git/refs \
-              -f "ref=refs/heads/$TEST_BRANCH" \
-              -f "sha=$TEST_SHA" > /dev/null 2>&1; then
-              echo "Branch creation: SUCCESS"
-              BRANCH_OK=true
-            else
-              echo "Branch creation: FAILED (token missing contents:write)"
-            fi
-
-            echo ""
-            echo "## Pull-request creation test"
-            if [ "$BRANCH_OK" = "true" ]; then
-              PR_OUT=$(gh pr create \
-                --base main --head "$TEST_BRANCH" \
-                --title "test: diagnostic PR (will be closed)" \
-                --body "Automated diagnostic — safe to delete" 2>&1)
-              if echo "$PR_OUT" | grep -q "https://github.com"; then
-                echo "PR creation: **SUCCESS** — token has pull-requests:write"
-                gh pr close "$TEST_BRANCH" --delete-branch 2>&1 | head -1 || true
-              else
-                echo "PR creation: **FAILED** ← THIS IS THE BUG"
-                echo ""
-                echo "Error: $PR_OUT"
-                echo ""
-                echo "> Fix: The \`RELEASE_PLEASE_TOKEN\` PAT needs **Pull requests: Read and write**"
-                echo "> scope. Create a new Classic PAT with \`repo\` scope, or a Fine-Grained PAT"
-                echo "> with both \`Contents: R/W\` AND \`Pull requests: R/W\`."
-                gh api --method DELETE "repos/bini93/pkgview/git/refs/heads/$TEST_BRANCH" > /dev/null 2>&1 || true
-              fi
-            else
-              echo "Skipped (branch creation failed)"
-            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   publish:

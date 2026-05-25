@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.1](https://github.com/bini93/pkgview/compare/pkgview-v0.6.0...pkgview-v0.6.1) (2026-05-25)
+
+
+### Fixed
+
+* **macos-apps:** catch ExpatError in plist parsing, silence detector tracebacks ([a4c6344](https://github.com/bini93/pkgview/commit/a4c6344844bb82977ad8c3ad784fce60c782c6ac))
+
 ## [0.6.0](https://github.com/bini93/pkgview/compare/pkgview-v0.5.2...pkgview-v0.6.0) (2026-05-25)
 
 

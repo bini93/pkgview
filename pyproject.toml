@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pkgview"
-version = "0.5.1"
+version = "0.5.2"
 description = "CLI tool to list all installed programs and their package manager"
 readme = "README.md"
 license = { text = "GPL-3.0-or-later" }

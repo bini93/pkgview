@@ -6,6 +6,7 @@ import subprocess
 import sys
 import threading
 import xml.etree.ElementTree as ET
+import xml.parsers.expat
 from pathlib import Path
 
 from pkgview.detectors.base import Detector
@@ -80,7 +81,9 @@ def _read_app_plist(app_path: Path) -> tuple[str, str]:
         )
         bundle_id = str(info.get("CFBundleIdentifier", ""))
         return version, bundle_id
-    except (OSError, plistlib.InvalidFileException, ValueError, ET.ParseError):
+    except (OSError, plistlib.InvalidFileException, ValueError, ET.ParseError,
+            xml.parsers.expat.ExpatError) as _plist_exc:
+        logger.debug("Skipping %s: %s", plist_path, _plist_exc)
         return "", ""
 
 

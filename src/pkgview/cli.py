@@ -220,7 +220,7 @@ def main(
                             f"[dim]({elapsed:.2f}s)[/dim]"
                         )
                 except Exception as exc:
-                    logger.error(
+                    logger.debug(
                         "Detector %s failed: %s", inst.name, exc, exc_info=True
                     )
                     _warnings.append(
@@ -256,7 +256,7 @@ def main(
                         f"[dim]({time.monotonic() - t0:.2f}s)[/dim]"
                     )
             except Exception as exc:
-                logger.error(
+                logger.debug(
                     "Detector macos-apps failed: %s", exc, exc_info=True
                 )
                 _warnings.append(
@@ -286,7 +286,7 @@ def main(
                         f"[dim]({time.monotonic() - t0:.2f}s)[/dim]"
                     )
             except Exception as exc:
-                logger.error(
+                logger.debug(
                     "Detector manual failed: %s", exc, exc_info=True
                 )
                 _warnings.append(
@@ -337,7 +337,7 @@ def main(
                                 f"  [dim]{det.name}  checked  ({elapsed:.2f}s)[/dim]"
                             )
                     except Exception as exc:
-                        logger.error(
+                        logger.debug(
                             "Outdated check for %s failed: %s", det.name, exc, exc_info=True
                         )
                         _warnings.append(

@@ -55,13 +55,38 @@ jobs:
             echo "## Branch-creation write test"
             TEST_SHA=$(git rev-parse HEAD)
             TEST_BRANCH="diag-write-test-$$"
+            BRANCH_OK=false
             if gh api --method POST repos/bini93/pkgview/git/refs \
               -f "ref=refs/heads/$TEST_BRANCH" \
               -f "sha=$TEST_SHA" > /dev/null 2>&1; then
-              echo "Branch creation: SUCCESS (token has write access)"
-              gh api --method DELETE "repos/bini93/pkgview/git/refs/heads/$TEST_BRANCH" > /dev/null 2>&1 || true
+              echo "Branch creation: SUCCESS"
+              BRANCH_OK=true
             else
-              echo "Branch creation: FAILED (token missing contents:write or push scope)"
+              echo "Branch creation: FAILED (token missing contents:write)"
+            fi
+
+            echo ""
+            echo "## Pull-request creation test"
+            if [ "$BRANCH_OK" = "true" ]; then
+              PR_OUT=$(gh pr create \
+                --base main --head "$TEST_BRANCH" \
+                --title "test: diagnostic PR (will be closed)" \
+                --body "Automated diagnostic — safe to delete" 2>&1)
+              if echo "$PR_OUT" | grep -q "https://github.com"; then
+                echo "PR creation: **SUCCESS** — token has pull-requests:write"
+                gh pr close "$TEST_BRANCH" --delete-branch 2>&1 | head -1 || true
+              else
+                echo "PR creation: **FAILED** ← THIS IS THE BUG"
+                echo ""
+                echo "Error: $PR_OUT"
+                echo ""
+                echo "> Fix: The \`RELEASE_PLEASE_TOKEN\` PAT needs **Pull requests: Read and write**"
+                echo "> scope. Create a new Classic PAT with \`repo\` scope, or a Fine-Grained PAT"
+                echo "> with both \`Contents: R/W\` AND \`Pull requests: R/W\`."
+                gh api --method DELETE "repos/bini93/pkgview/git/refs/heads/$TEST_BRANCH" > /dev/null 2>&1 || true
+              fi
+            else
+              echo "Skipped (branch creation failed)"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

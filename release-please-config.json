@@ -4,6 +4,7 @@
     ".": {
       "release-type": "python",
       "package-name": "pkgview",
+      "include-component-in-tag": true,
       "extra-files": [
         "src/pkgview/__init__.py"
       ],

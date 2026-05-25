@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.6.0](https://github.com/bini93/pkgview/compare/pkgview-v0.5.2...pkgview-v0.6.0) (2026-05-25)
+
+
+### Added
+
+* **main:** add logging to package detectors and configure logging setup ([f73dd20](https://github.com/bini93/pkgview/commit/f73dd20e4ad33777da77775b1a017005d37559dc))
+
+
+### Fixed
+
+* migrate TestSlowWarnings from capsys to dedicated log handler ([a44331f](https://github.com/bini93/pkgview/commit/a44331f7f7c7e32f5a8648f0f37ad0382dc7b71f))
+
 ## [0.5.2](https://github.com/bini93/pkgview/compare/pkgview-v0.5.1...pkgview-v0.5.2) (2026-05-25)
 
 

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from typing import Dict, List
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
 
+logger = logging.getLogger("pkgview.detectors.pip")
+
 
 def _pip_packages() -> List[Dict]:
+    logger.debug("Subprocess: pip list --format=json")
     try:
         result = subprocess.run(
             ["pip", "list", "--format=json"],
@@ -19,11 +23,22 @@ def _pip_packages() -> List[Dict]:
         if result.returncode != 0:
             return []
         return json.loads(result.stdout)
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+    except FileNotFoundError:
+        logger.debug("Not found: pip")
+        return []
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout running: pip list")
+        return []
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse pip list output: %s", exc)
+        return []
+    except OSError as exc:
+        logger.warning("OS error running pip: %s", exc)
         return []
 
 
 def _pipx_packages() -> List[Dict]:
+    logger.debug("Subprocess: pipx list --json")
     try:
         result = subprocess.run(
             ["pipx", "list", "--json"],
@@ -43,7 +58,17 @@ def _pipx_packages() -> List[Dict]:
             )
             items.append({"name": pkg_name, "version": version})
         return items
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+    except FileNotFoundError:
+        logger.debug("Not found: pipx")
+        return []
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout running: pipx list")
+        return []
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse pipx list output: %s", exc)
+        return []
+    except OSError as exc:
+        logger.warning("OS error running pipx: %s", exc)
         return []
 
 
@@ -80,6 +105,7 @@ class PipDetector(Detector):
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``pip list --outdated --format=json`` to find outdated packages."""
+        logger.debug("Checking outdated pip packages")
         try:
             result = subprocess.run(
                 ["pip", "list", "--outdated", "--format=json"],
@@ -96,5 +122,5 @@ class PipDetector(Detector):
                 if name in packages and latest:
                     packages[name].outdated = True
                     packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError) as exc:
+            logger.warning("Could not check outdated pip packages: %s", exc)

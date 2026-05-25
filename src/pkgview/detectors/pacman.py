@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.pacman")
 
 
 class PacmanDetector(Detector):
@@ -21,6 +24,7 @@ class PacmanDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: pacman -Qe")
         try:
             result = subprocess.run(
                 ["pacman", "-Qe"],
@@ -40,12 +44,17 @@ class PacmanDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: pacman")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: pacman -Qe")
+        except OSError as exc:
+            logger.warning("OS error running pacman: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``checkupdates`` (pacman-contrib) to find available updates."""
+        logger.debug("Checking outdated pacman packages")
         try:
             result = subprocess.run(
                 ["checkupdates"],
@@ -62,5 +71,5 @@ class PacmanDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated pacman packages: %s", exc)

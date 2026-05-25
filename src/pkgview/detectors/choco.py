@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.choco")
 
 
 class ChocoDetector(Detector):
@@ -16,6 +19,7 @@ class ChocoDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: choco list --local-only")
         try:
             result = subprocess.run(
                 ["choco", "list", "--local-only", "--no-progress"],
@@ -43,12 +47,17 @@ class ChocoDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: choco")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: choco list")
+        except OSError as exc:
+            logger.warning("OS error running choco: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``choco outdated`` to find packages with available updates."""
+        logger.debug("Checking outdated chocolatey packages")
         try:
             result = subprocess.run(
                 ["choco", "outdated", "--no-progress"],
@@ -68,5 +77,5 @@ class ChocoDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated choco packages: %s", exc)

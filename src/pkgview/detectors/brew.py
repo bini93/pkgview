@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from typing import Dict, List
@@ -7,15 +8,26 @@ from typing import Dict, List
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
 
+logger = logging.getLogger("pkgview.detectors.brew")
+
 
 def _run(cmd: List[str]) -> List[str]:
     """Run a command and return non-empty output lines. Never raises."""
+    logger.debug("Subprocess: %s", " ".join(cmd))
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if result.returncode != 0:
+            logger.debug("%s exited %d: %s", cmd[0], result.returncode, result.stderr.strip())
             return []
         return [line.strip() for line in result.stdout.splitlines() if line.strip()]
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+    except FileNotFoundError:
+        logger.debug("Not found: %s", cmd[0])
+        return []
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout running: %s", " ".join(cmd))
+        return []
+    except OSError as exc:
+        logger.warning("OS error running %s: %s", cmd[0], exc)
         return []
 
 
@@ -58,6 +70,7 @@ class BrewDetector(Detector):
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``brew outdated --verbose`` to find formulae and casks with updates."""
+        logger.debug("Checking outdated brew packages")
         try:
             result = subprocess.run(
                 ["brew", "outdated", "--verbose"],
@@ -75,5 +88,9 @@ class BrewDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: brew")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: brew outdated")
+        except OSError as exc:
+            logger.warning("OS error running brew outdated: %s", exc)

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.nvm")
 
 
 class NvmDetector(Detector):
@@ -32,6 +35,6 @@ class NvmDetector(Detector):
                     path=str(entry / "bin" / "node"),
                     category="cli",
                 )
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.warning("Could not read nvm directory %s: %s", nvm_dir, exc)
         return packages

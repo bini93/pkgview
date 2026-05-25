@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.composer")
 
 
 class ComposerDetector(Detector):
@@ -17,6 +20,7 @@ class ComposerDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: composer global show --format=json")
         try:
             result = subprocess.run(
                 ["composer", "global", "show", "--format=json", "--no-interaction"],
@@ -38,12 +42,19 @@ class ComposerDetector(Detector):
                     version=version,
                     category="cli",
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: composer")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: composer global show")
+        except json.JSONDecodeError as exc:
+            logger.warning("Failed to parse composer output: %s", exc)
+        except OSError as exc:
+            logger.warning("OS error running composer: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``composer global outdated --format=json`` to find updates."""
+        logger.debug("Checking outdated composer packages")
         try:
             result = subprocess.run(
                 ["composer", "global", "outdated", "--format=json", "--no-interaction"],
@@ -60,5 +71,5 @@ class ComposerDetector(Detector):
                 if name in packages and latest:
                     packages[name].outdated = True
                     packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError) as exc:
+            logger.warning("Could not check outdated composer packages: %s", exc)

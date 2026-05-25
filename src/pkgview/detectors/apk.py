@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.apk")
 
 
 class ApkDetector(Detector):
@@ -17,6 +20,7 @@ class ApkDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: apk list --installed")
         try:
             result = subprocess.run(
                 ["apk", "list", "--installed"],
@@ -47,12 +51,17 @@ class ApkDetector(Detector):
                     version=ver_full,
                     category="cli",
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError, subprocess.CalledProcessError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: apk")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: apk list")
+        except OSError as exc:
+            logger.warning("OS error running apk: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``apk upgrade --simulate`` to find upgradable packages."""
+        logger.debug("Checking outdated apk packages")
         try:
             result = subprocess.run(
                 ["apk", "upgrade", "--simulate"],
@@ -71,5 +80,5 @@ class ApkDetector(Detector):
                         if name in packages:
                             packages[name].outdated = True
                             packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated apk packages: %s", exc)

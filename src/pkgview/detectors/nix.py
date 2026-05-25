@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.nix")
 
 
 class NixDetector(Detector):
@@ -17,6 +20,7 @@ class NixDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: nix-env -q --no-name")
         try:
             result = subprocess.run(
                 ["nix-env", "-q", "--no-name"],
@@ -45,12 +49,17 @@ class NixDetector(Detector):
                     version=version,
                     category="cli",
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: nix-env")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: nix-env -q")
+        except OSError as exc:
+            logger.warning("OS error running nix-env: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``nix-env --upgrade --dry-run`` to find outdated packages."""
+        logger.debug("Checking outdated nix packages")
         try:
             result = subprocess.run(
                 ["nix-env", "--upgrade", "--dry-run"],
@@ -73,5 +82,5 @@ class NixDetector(Detector):
                         if name in packages:
                             packages[name].outdated = True
                             packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated nix packages: %s", exc)

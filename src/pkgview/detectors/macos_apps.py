@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import plistlib
 import subprocess
 import sys
@@ -9,6 +10,8 @@ from pathlib import Path
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.macos_apps")
 
 
 def _run_with_slow_warning(
@@ -23,14 +26,18 @@ def _run_with_slow_warning(
     process, or ``None`` when the process times out or cannot be started.
     """
     def _warn() -> None:
-        print(f"pkgview: {warning}", file=sys.stderr)
+        logger.warning("%s", warning)
 
     timer = threading.Timer(warn_after, _warn)
     timer.daemon = True
     timer.start()
     try:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-    except (subprocess.TimeoutExpired, OSError):
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout running: %s (hard cap %ds)", " ".join(cmd), timeout)
+        return None
+    except OSError as exc:
+        logger.warning("OS error running %s: %s", cmd[0], exc)
         return None
     finally:
         timer.cancel()
@@ -141,8 +148,8 @@ def _filesystem_find_app_paths() -> list[Path]:
             for entry in scan_dir.iterdir():
                 if entry.suffix == ".app":
                     paths.append(entry)
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.warning("Could not scan %s: %s", scan_dir, exc)
     return paths
 
 

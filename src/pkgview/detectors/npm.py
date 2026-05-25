@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.npm")
 
 
 class NpmDetector(Detector):
@@ -15,6 +18,7 @@ class NpmDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: npm list -g --depth=0 --json")
         try:
             result = subprocess.run(
                 ["npm", "list", "-g", "--depth=0", "--json"],
@@ -35,12 +39,19 @@ class NpmDetector(Detector):
                     version=version,
                     category="cli",
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, ValueError, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: npm")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: npm list")
+        except (json.JSONDecodeError, ValueError) as exc:
+            logger.warning("Failed to parse npm list output: %s", exc)
+        except OSError as exc:
+            logger.warning("OS error running npm: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``npm outdated -g --json`` to find globally outdated packages."""
+        logger.debug("Checking outdated npm packages")
         try:
             result = subprocess.run(
                 ["npm", "outdated", "-g", "--json"],
@@ -59,5 +70,5 @@ class NpmDetector(Detector):
                 if name in packages and latest:
                     packages[name].outdated = True
                     packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError) as exc:
+            logger.warning("Could not check outdated npm packages: %s", exc)

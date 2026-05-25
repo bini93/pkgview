@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.asdf")
 
 
 class AsdfDetector(Detector):
@@ -43,12 +46,13 @@ class AsdfDetector(Detector):
                         path=str(version_dir),
                         category="cli",
                     )
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.warning("Could not read asdf installs directory: %s", exc)
         return packages
 
     def _run_list(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: asdf list")
         try:
             result = subprocess.run(
                 ["asdf", "list"],
@@ -74,6 +78,10 @@ class AsdfDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: asdf")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: asdf list")
+        except OSError as exc:
+            logger.warning("OS error running asdf: %s", exc)
         return packages

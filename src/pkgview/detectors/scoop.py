@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.scoop")
 
 
 class ScoopDetector(Detector):
@@ -16,6 +19,7 @@ class ScoopDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: scoop list")
         try:
             result = subprocess.run(
                 ["scoop", "list"],
@@ -53,12 +57,17 @@ class ScoopDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: scoop")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: scoop list")
+        except OSError as exc:
+            logger.warning("OS error running scoop: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``scoop status`` to find packages with available updates."""
+        logger.debug("Checking outdated scoop packages")
         try:
             result = subprocess.run(
                 ["scoop", "status"],
@@ -90,5 +99,5 @@ class ScoopDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated scoop packages: %s", exc)

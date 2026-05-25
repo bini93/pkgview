@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import pathlib
 import time
 from contextlib import nullcontext
@@ -11,6 +12,7 @@ from rich.console import Console
 from rich.markup import escape
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from pkgview.logging_config import setup_logging
 from pkgview.detectors.base import Detector
 from pkgview.detectors.brew import BrewDetector
 from pkgview.detectors.npm import NpmDetector
@@ -62,6 +64,7 @@ app = typer.Typer(
 )
 
 console = Console()
+logger = logging.getLogger("pkgview.cli")
 
 # Detectors that are fully independent (run in parallel)
 INDEPENDENT_DETECTORS: List[Type[Detector]] = [
@@ -146,10 +149,17 @@ def main(
         "-v",
         help="Show each detector's name, package count, and elapsed time.",
     ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Enable DEBUG-level logging to stderr.",
+        hidden=True,
+    ),
 ) -> None:
     if version:
         console.print(f"pkgview {__version__}")
         raise typer.Exit()
+    setup_logging(debug=debug)
     if filter_manager and filter_manager not in VALID_MANAGERS:
         console.print(
             f"[red]Unknown manager '[bold]{filter_manager}[/bold]'. "
@@ -210,6 +220,9 @@ def main(
                             f"[dim]({elapsed:.2f}s)[/dim]"
                         )
                 except Exception as exc:
+                    logger.error(
+                        "Detector %s failed: %s", inst.name, exc, exc_info=True
+                    )
                     _warnings.append(
                         f"[yellow]Warning: {inst.name} failed: {escape(str(exc))}[/yellow]"
                     )
@@ -243,6 +256,9 @@ def main(
                         f"[dim]({time.monotonic() - t0:.2f}s)[/dim]"
                     )
             except Exception as exc:
+                logger.error(
+                    "Detector macos-apps failed: %s", exc, exc_info=True
+                )
                 _warnings.append(
                     f"[yellow]Warning: MacOsAppsDetector failed: {escape(str(exc))}[/yellow]"
                 )
@@ -270,6 +286,9 @@ def main(
                         f"[dim]({time.monotonic() - t0:.2f}s)[/dim]"
                     )
             except Exception as exc:
+                logger.error(
+                    "Detector manual failed: %s", exc, exc_info=True
+                )
                 _warnings.append(
                     f"[yellow]Warning: ManualDetector failed: {escape(str(exc))}[/yellow]"
                 )
@@ -318,6 +337,9 @@ def main(
                                 f"  [dim]{det.name}  checked  ({elapsed:.2f}s)[/dim]"
                             )
                     except Exception as exc:
+                        logger.error(
+                            "Outdated check for %s failed: %s", det.name, exc, exc_info=True
+                        )
                         _warnings.append(
                             f"[yellow]Warning: outdated check for "
                             f"{det.name} failed: {escape(str(exc))}[/yellow]"

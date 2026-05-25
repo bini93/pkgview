@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.apt")
 
 
 class AptDetector(Detector):
@@ -29,12 +32,17 @@ class AptDetector(Detector):
                 name = line.strip()
                 if name:
                     packages[name] = Package(name=name, manager="apt", category="cli")
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: apt-mark")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: apt-mark showmanual")
+        except OSError as exc:
+            logger.warning("OS error running apt-mark: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``apt list --upgradable`` to find packages with available updates."""
+        logger.debug("Checking outdated apt packages")
         try:
             result = subprocess.run(
                 ["apt", "list", "--upgradable"],
@@ -52,5 +60,5 @@ class AptDetector(Detector):
                 if name in packages and latest:
                     packages[name].outdated = True
                     packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated apt packages: %s", exc)

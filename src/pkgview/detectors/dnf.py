@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.dnf")
 
 
 class DnfDetector(Detector):
@@ -30,6 +33,7 @@ class DnfDetector(Detector):
 
     def _query(self, base_cmd: list) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: %s repoquery --userinstalled", base_cmd[0])
         try:
             result = subprocess.run(
                 base_cmd + [
@@ -57,12 +61,17 @@ class DnfDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: %s", base_cmd[0])
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: %s repoquery", base_cmd[0])
+        except OSError as exc:
+            logger.warning("OS error running %s: %s", base_cmd[0], exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``dnf check-update`` to find available updates."""
+        logger.debug("Checking outdated dnf packages")
         try:
             result = subprocess.run(
                 ["dnf", "check-update", "--quiet"],
@@ -82,5 +91,5 @@ class DnfDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated dnf packages: %s", exc)

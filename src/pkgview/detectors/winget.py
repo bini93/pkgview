@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import re
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.winget")
 
 
 class WingetDetector(Detector):
@@ -17,6 +20,7 @@ class WingetDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: winget list")
         try:
             result = subprocess.run(
                 [
@@ -57,12 +61,17 @@ class WingetDetector(Detector):
                             version=version,
                             category="cli",
                         )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: winget")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: winget list")
+        except OSError as exc:
+            logger.warning("OS error running winget: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``winget upgrade --source winget`` to find available updates."""
+        logger.debug("Checking outdated winget packages")
         try:
             result = subprocess.run(
                 [
@@ -95,5 +104,5 @@ class WingetDetector(Detector):
                     if name in packages and latest:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated winget packages: %s", exc)

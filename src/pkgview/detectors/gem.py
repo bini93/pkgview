@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.gem")
 
 
 class GemDetector(Detector):
@@ -16,6 +19,7 @@ class GemDetector(Detector):
 
     def detect(self) -> Dict[str, Package]:
         packages: Dict[str, Package] = {}
+        logger.debug("Subprocess: gem list --no-verbose")
         try:
             result = subprocess.run(
                 ["gem", "list", "--no-verbose"],
@@ -44,12 +48,17 @@ class GemDetector(Detector):
                         version=version,
                         category="cli",
                     )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: gem")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: gem list")
+        except OSError as exc:
+            logger.warning("OS error running gem: %s", exc)
         return packages
 
     def check_outdated(self, packages: Dict[str, Package]) -> None:
         """Uses ``gem outdated`` to find gems with available updates."""
+        logger.debug("Checking outdated gem packages")
         try:
             result = subprocess.run(
                 ["gem", "outdated"],
@@ -69,5 +78,5 @@ class GemDetector(Detector):
                     if name in packages:
                         packages[name].outdated = True
                         packages[name].latest_version = latest
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Could not check outdated gem packages: %s", exc)

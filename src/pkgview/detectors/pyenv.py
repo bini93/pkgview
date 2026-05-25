@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 import subprocess
 from pathlib import Path
 from typing import Dict
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
+
+logger = logging.getLogger("pkgview.detectors.pyenv")
 
 
 class PyenvDetector(Detector):
@@ -33,11 +36,12 @@ class PyenvDetector(Detector):
                         path=str(entry / "bin" / "python"),
                         category="cli",
                     )
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.warning("Could not read pyenv versions directory: %s", exc)
             return packages
 
         # Fallback: pyenv binary
+        logger.debug("Subprocess: pyenv versions --bare")
         try:
             result = subprocess.run(
                 ["pyenv", "versions", "--bare"],
@@ -58,6 +62,10 @@ class PyenvDetector(Detector):
                     version=version,
                     category="cli",
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-            pass
+        except FileNotFoundError:
+            logger.debug("Not found: pyenv")
+        except subprocess.TimeoutExpired:
+            logger.warning("Timeout running: pyenv versions")
+        except OSError as exc:
+            logger.warning("OS error running pyenv: %s", exc)
         return packages

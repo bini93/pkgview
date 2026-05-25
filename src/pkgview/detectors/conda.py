@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 from typing import Dict, List
 
 from pkgview.detectors.base import Detector
 from pkgview.models import Package
 
+logger = logging.getLogger("pkgview.detectors.conda")
+
 
 def _conda_list(cmd: str) -> List[Dict]:
     """Run ``cmd list --json`` and return the parsed list. Never raises."""
+    logger.debug("Subprocess: %s list --json", cmd)
     try:
         result = subprocess.run(
             [cmd, "list", "--json"],
@@ -20,7 +24,17 @@ def _conda_list(cmd: str) -> List[Dict]:
         if result.returncode != 0:
             return []
         return json.loads(result.stdout)
-    except (FileNotFoundError, subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+    except FileNotFoundError:
+        logger.debug("Not found: %s", cmd)
+        return []
+    except subprocess.TimeoutExpired:
+        logger.warning("Timeout running: %s list", cmd)
+        return []
+    except json.JSONDecodeError as exc:
+        logger.warning("Failed to parse %s list output: %s", cmd, exc)
+        return []
+    except OSError as exc:
+        logger.warning("OS error running %s: %s", cmd, exc)
         return []
 
 

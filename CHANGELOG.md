@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.2](https://github.com/bini93/pkgview/compare/pkgview-v0.5.1...pkgview-v0.5.2) (2026-05-25)
+
+
+### Fixed
+
+* handle XML parsing errors in _read_app_plist ([4a85ce2](https://github.com/bini93/pkgview/commit/4a85ce295d01bcd251d7e6c011d0342159ca53ac))
+
 ## [0.5.1](https://github.com/bini93/pkgview/compare/pkgview-v0.5.0...pkgview-v0.5.1) (2026-05-25)
 
 

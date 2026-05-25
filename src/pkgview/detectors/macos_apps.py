@@ -4,6 +4,7 @@ import plistlib
 import subprocess
 import sys
 import threading
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from pkgview.detectors.base import Detector
@@ -72,7 +73,7 @@ def _read_app_plist(app_path: Path) -> tuple[str, str]:
         )
         bundle_id = str(info.get("CFBundleIdentifier", ""))
         return version, bundle_id
-    except (OSError, plistlib.InvalidFileException, ValueError):
+    except (OSError, plistlib.InvalidFileException, ValueError, ET.ParseError):
         return "", ""
 
 

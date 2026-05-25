@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.5.0](https://github.com/bini93/pkgview/compare/pkgview-v0.4.0...pkgview-v0.5.0) (2026-05-25)
+
+
+### Added
+
+* add verbose mode ([#5](https://github.com/bini93/pkgview/issues/5)) ([acf468d](https://github.com/bini93/pkgview/commit/acf468d09eddecceb563ce871e7ff448a6262995))
+
+
+### Fixed
+
+* add missing 'with' block for actions/checkout in publish workflow ([ae5cc7e](https://github.com/bini93/pkgview/commit/ae5cc7e35a1b87e005812f581ddbb16025f12601))
+* allow release-please to create PRs, add contents:read to publish job ([73e230e](https://github.com/bini93/pkgview/commit/73e230e5a6c4aa7ee0fa44f87e2dd1a104926481))
+* explicitly set include-component-in-tag to match pkgview-v* tag format ([8a5a1a5](https://github.com/bini93/pkgview/commit/8a5a1a588b4db3029ebc940c0e2e02ada0c821e7))
+* remove stray shell fragment from release-please workflow ([2ed78f1](https://github.com/bini93/pkgview/commit/2ed78f18cefcd5bf4ddf1db2352d6c318ce5b007))
+* update actions/checkout and actions/setup-python to v6 in workflows ([ce7e321](https://github.com/bini93/pkgview/commit/ce7e3210fddc43e9aba97a879b515ee1197c2368))
+* update release-please action to v5 and adjust permissions ([9af0c35](https://github.com/bini93/pkgview/commit/9af0c359e19b6d75a60a76f7e45ff96e1cf7d33f))
+
 ## [0.4.0](https://github.com/bini93/pkgview/compare/pkgview-v0.3.1...pkgview-v0.4.0) (2026-05-24)
 
 

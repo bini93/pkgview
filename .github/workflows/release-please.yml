@@ -21,12 +21,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: googleapis/release-please-action@v5
-        id: release
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          token: ${{ github.token }}
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          node-version: "20"
+
+      - name: Run release-please CLI
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          OUTPUT=$(npx --yes release-please@16 release-pr \
+            --repo-url bini93/pkgview \
+            --config-file release-please-config.json \
+            --manifest-file .release-please-manifest.json \
+            --token "${{ github.token }}" \
+            --debug 2>&1)
+          EXIT=$?
+          echo "$OUTPUT"
+          echo "--- Exit code: $EXIT ---"
+
+          PR_URL=$(echo "$OUTPUT" | grep -oP 'https://github\.com/[^\s"]+/pull/[0-9]+' | head -1)
+          if [ -n "$PR_URL" ]; then
+            echo "release_created=false" >> "$GITHUB_OUTPUT"
+            echo "prs_created=true" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR_URL" >> "$GITHUB_OUTPUT"
+            echo "PR created/updated: $PR_URL"
+          else
+            echo "release_created=false" >> "$GITHUB_OUTPUT"
+            echo "prs_created=false" >> "$GITHUB_OUTPUT"
+            echo "No PR created."
+          fi
 
   publish:
     needs: release-please
